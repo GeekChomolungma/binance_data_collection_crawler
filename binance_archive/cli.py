@@ -8,6 +8,7 @@ import sys
 
 from .config import Config
 from .crawler import crawl
+from .panel import build_panel
 from . import symbols as symbols_mod
 from . import vision
 
@@ -37,16 +38,25 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_common(lp)
     lp.add_argument("symbol")
 
+    pp = sub.add_parser("panel", help="stitch downloaded CSVs into one long panel CSV")
+    _add_common(pp)
+    pp.add_argument("--symbols", help="comma-separated override, e.g. BTCUSDT,ETHUSDT")
+    pp.add_argument("--start", help="override panel.start_month (YYYY-MM)")
+    pp.add_argument("--end", help="override panel.end_month (YYYY-MM)")
+    pp.add_argument("--dry-run", action="store_true", help="list inputs + output path, write nothing")
+
     return parser
 
 
 def _load_cfg(args: argparse.Namespace) -> Config:
     cfg = Config.load(args.config)
-    for src, dst in (("start", "start_month"), ("end", "end_month")):
-        val = getattr(args, src, None)
-        if val:
-            setattr(cfg, dst, val)
-    cfg.validate()
+    # --start/--end mean the crawl range here; the panel command applies its own
+    if args.cmd == "crawl":
+        if getattr(args, "start", None):
+            cfg.start_month = args.start
+        if getattr(args, "end", None):
+            cfg.end_month = args.end
+        cfg.validate()
     return cfg
 
 
@@ -99,6 +109,24 @@ def main(argv: list[str] | None = None) -> int:
             for e in result.errors[:20]:
                 print(f"  - {e}", file=sys.stderr)
             return 1
+        return 0
+
+    if args.cmd == "panel":
+        syms = None
+        if args.symbols:
+            syms = [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
+        try:
+            result = build_panel(cfg, syms, start=args.start, end=args.end, dry_run=args.dry_run)
+        except (RuntimeError, FileNotFoundError) as exc:
+            print(f"panel: {exc}", file=sys.stderr)
+            return 1
+        print(f"\ndone: {result}")
+        if result.skipped:
+            print(
+                f"{len(result.skipped)} symbol(s) skipped (no local CSV): "
+                + ", ".join(result.skipped),
+                file=sys.stderr,
+            )
         return 0
 
     return 2

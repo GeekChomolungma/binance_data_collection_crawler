@@ -27,8 +27,14 @@ VISION_HOST = "https://data.binance.vision"
 # answers the ListBucket XML query used for discovery.
 LIST_ENDPOINT = "https://s3-ap-northeast-1.amazonaws.com/data.binance.vision"
 _S3_NS = "{http://s3.amazonaws.com/doc/2006-03-01/}"
-# trailing "-YYYY-MM.zip" or "-YYYY-MM-DD.zip"
-_DATE_RE = re.compile(r"-(\d{4}-\d{2})(?:-\d{2})?\.zip$")
+# trailing "-YYYY-MM.zip" / "-YYYY-MM-DD.zip" / "-YYYY-MM.csv" ...
+_DATE_RE = re.compile(r"-(\d{4}-\d{2})(?:-\d{2})?\.(?:zip|csv)$")
+
+
+def month_of(filename: str) -> str | None:
+    """Extract the ``YYYY-MM`` stamp from an archive file name, or ``None``."""
+    m = _DATE_RE.search(filename)
+    return m.group(1) if m else None
 
 
 # ── path / url construction ──────────────────────────────────────────────────

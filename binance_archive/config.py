@@ -49,6 +49,8 @@ class Config:
     strict_checksum: bool = False
     keep_zip: bool = False
     base_api_url: str | None = None
+    # panel-stitching options; parsed/validated in binance_archive.panel
+    panel: dict = dataclasses.field(default_factory=dict)
 
     # ── derived helpers ────────────────────────────────────────────────────
     @property

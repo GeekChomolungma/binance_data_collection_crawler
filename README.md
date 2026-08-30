@@ -110,6 +110,40 @@ everything. Prints a summary like `done: downloaded=812, skipped=1043, missing=4
 
 Prints every archive file available for that symbol and exits.
 
+### 4. Stitch a panel
+
+```powershell
+.\.venv\Scripts\python.exe -m binance_archive panel
+```
+
+Reads the per-symbol CSVs that `crawl` produced and concatenates them into **one
+long-format CSV**, globally sorted by time:
+
+```text
+timestamp, symbol, open, high, low, close, volume, close_time, quote_volume, count, taker_buy_volume, taker_buy_quote_volume, ignore
+```
+
+`timestamp` + `symbol` are the composite key. `timestamp` is CSV column 0;
+`symbol` is the name from the symbols file (original case). This step is offline —
+it never hits the network — and is configured by the separate `panel:` block in
+`system.yaml` (see the comments there). Discovery scope keys left `null` inherit
+from the crawl block, so by default the panel covers exactly what you crawled.
+
+| Flag | Effect |
+|---|---|
+| `--symbols BTCUSDT,ETHUSDT` | stitch just these, ignore `panel.symbols_file` |
+| `--start 2024-01` / `--end 2024-12` | override `panel.start_month` / `panel.end_month` for this run |
+| `--dry-run` | list the discovered inputs + output path, write nothing |
+| `-v` | debug logging |
+
+**Timestamp note.** Binance switched the archive time unit from milliseconds to
+microseconds during 2025 (columns 0 and 6). `panel.timestamp` reconciles this:
+`ms` (default) auto-detects per row and normalises to integer epoch ms; `us` to
+epoch µs; `iso` to a UTC ISO-8601 string; `raw` leaves column 0 untouched (mixed
+units). Output goes to `panel.output_dir` (default `./panel`), under the same
+`market / frequency / data_type / interval` sub-folders as `rawdata` but with **no
+per-symbol folder** — one file, `panel.output_name` (default `panel.csv`).
+
 ---
 
 ## Examples
@@ -143,8 +177,9 @@ rawdata/
 
 The path is `output_dir / <market> / <frequency> / <data_type> / <symbol> / [<interval>]`,
 matching the archive URL (symbol folder lower-cased). The CSV columns are exactly
-as Binance publishes them (open time, open, high, low, close, volume, close time,
-quote volume, trade count, taker buy base, taker buy quote, ignore).
+as Binance publishes them, with **no header row** (open time, open, high, low,
+close, volume, close time, quote volume, trade count, taker buy base, taker buy
+quote, ignore). The `panel` command adds the header and a `symbol` column.
 
 ---
 
@@ -156,6 +191,7 @@ binance_archive/
   symbols.py   exchangeInfo REST -> live symbol list (spot / um / cm)
   vision.py    list files / build URLs / download / sha256-verify / safe-unzip
   crawler.py   orchestrate the crawl with a thread pool, one symbol at a time
+  panel.py     stitch the per-symbol CSVs into one long-format panel (offline)
   cli.py       argparse entry point (python -m binance_archive ...)
 config/
   system.yaml  the knobs above
