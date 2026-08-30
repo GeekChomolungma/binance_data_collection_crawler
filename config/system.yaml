@@ -1,0 +1,23 @@
+# ── What to crawl ───────────────────────────────────────────────────────────
+market: spot            # spot | um (USDⓈ-M futures) | cm (COIN-M futures)
+data_frequency: monthly # monthly | daily
+data_type: klines       # klines | trades | aggTrades | bookTicker | ...
+interval: 4h            # required when data_type is a *klines type; ignored otherwise
+quote_asset: USDT       # only pairs quoted in this asset are crawled.
+                        #   spot -> USDT / USDC / BTC ...
+                        #   um   -> USDT (or USDC)          e.g. BTCUSDT
+                        #   cm   -> USD  (COIN-M is USD-quoted, coin-margined)  e.g. BTCUSD_PERP
+
+# ── Optional month range (inclusive), format YYYY-MM ────────────────────────
+start_month: null       # e.g. 2020-01  (null = from the earliest available archive)
+end_month: null         # e.g. 2026-07  (null = up to the latest available archive)
+
+# ── IO / behaviour ─────────────────────────────────────────────────────────
+output_dir: ./rawdata
+symbols_file: ./config/symbols.txt
+max_workers: 6
+skip_existing: true      # skip a month when its extracted .csv already exists on disk
+verify_checksum: true    # download the .CHECKSUM sidecar and verify the sha256
+strict_checksum: false   # fail (instead of warn) when a .CHECKSUM sidecar is missing
+keep_zip: false          # keep the downloaded .zip next to the extracted .csv
+base_api_url: null       # full override for the exchangeInfo URL (regional mirror / testnet)
