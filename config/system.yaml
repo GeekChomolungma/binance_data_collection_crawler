@@ -1,8 +1,8 @@
 # ── What to crawl ───────────────────────────────────────────────────────────
-market: spot            # spot | um (USDⓈ-M futures) | cm (COIN-M futures)
+market: um              # spot | um (USDⓈ-M futures) | cm (COIN-M futures)
 data_frequency: monthly # monthly | daily
 data_type: klines       # klines | trades | aggTrades | bookTicker | ...
-interval: 4h            # required when data_type is a *klines type; ignored otherwise
+interval: 1m            # required when data_type is a *klines type; ignored otherwise
 quote_asset: USDT       # only pairs quoted in this asset are crawled.
                         #   spot -> USDT / USDC / BTC ...
                         #   um   -> USDT (or USDC)          e.g. BTCUSDT
