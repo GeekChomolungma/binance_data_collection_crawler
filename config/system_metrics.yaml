@@ -1,0 +1,57 @@
+# ── What to crawl ───────────────────────────────────────────────────────────
+market: um              # spot | um (USDⓈ-M futures) | cm (COIN-M futures)
+data_frequency: daily   # monthly | daily
+data_type: metrics    # klines | trades | aggTrades | bookTicker | metrics ...
+                        # metrics = 5m OI etc; create_time is UTC and marks the CLOSE of the 5m bar
+interval: null       # ignored for metrics
+quote_asset: USDT       # only pairs quoted in this asset are crawled.
+                        #   spot -> USDT / USDC / BTC ...
+                        #   um   -> USDT (or USDC)          e.g. BTCUSDT
+                        #   cm   -> USD  (COIN-M is USD-quoted, coin-margined)  e.g. BTCUSD_PERP
+
+# ── Optional month range (inclusive), format YYYY-MM ────────────────────────
+start_month: null       # e.g. 2020-01  (null = from the earliest available archive)
+end_month: null         # e.g. 2026-07  (null = up to the latest available archive)
+
+# ── IO / behaviour ─────────────────────────────────────────────────────────
+output_dir: ./rawdata
+symbols_file: ./config/symbols.txt
+max_workers: 8
+skip_existing: true      # skip a month when its extracted .csv already exists on disk
+verify_checksum: true    # download the .CHECKSUM sidecar and verify the sha256
+strict_checksum: false   # fail (instead of warn) when a .CHECKSUM sidecar is missing
+keep_zip: false          # keep the downloaded .zip next to the extracted .csv
+base_api_url: null       # full override for the exchangeInfo URL (regional mirror / testnet)
+
+# ── Panel stitching (independent of the crawl) ─────────────────────────────
+# `python -m binance_archive panel` reads the per-symbol CSVs produced by `crawl`
+# and concatenates them into ONE long-format CSV:
+#     timestamp, symbol, <remaining raw columns...>
+# `timestamp` + `symbol` are the composite key. Symbols come from `symbols_file`.
+panel:
+  input_dir: ./rawdata          # where crawl wrote the CSVs
+  output_dir: ./panel           # sibling of rawdata; sub-folders mirror the layout
+  output_name: panel.csv        # the single stitched file (no per-symbol folder)
+
+  # Month range for the panel, independent of the crawl range above.
+  # null/null = stitch every CSV found, sorted by time.
+  start_month: null             # e.g. 2020-01
+  end_month: null               # e.g. 2026-07
+
+  # Time column rendering. Binance switched the archive unit ms -> us during 2025;
+  #   ms  (default) auto-detect per row, normalise to integer epoch milliseconds
+  #   us            same, normalise to integer epoch microseconds
+  #   iso           UTC ISO-8601 string
+  #   raw           leave column 0 exactly as in the source file (mixed units!)
+  timestamp: ms
+  write_header: true            # emit the column-name header row
+
+  # Discovery scope. null on any of these -> inherit from the crawl block above,
+  # so by default the panel covers exactly what you crawled.
+  market: null                  # spot | um | cm
+  data_frequency: null          # monthly | daily
+  data_type: null               # klines | trades | aggTrades | ...
+  interval: null                # 4h | 1h | ...  (kline types only)
+  symbols_file: null            # path override for the symbol list
+  columns: null                 # optional explicit raw-column names, e.g.
+                                #   [open_time, open, high, low, close, volume, ...]
